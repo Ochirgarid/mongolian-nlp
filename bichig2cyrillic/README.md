@@ -1,6 +1,6 @@
 The traditional Mongolian script uses an old pronunciation which differs
 from the modern Mongolian spoken language. This experiment tries to convert
-between the Mongolian script (old pronunciation) to the cyrillic script (modern pronunciation)
+between the Mongolian script (old pronunciation) and the cyrillic script (modern pronunciation)
 using deep learning.
 
 
@@ -14,10 +14,10 @@ pip install -r requirements.txt
 python setup.py build develop
 ```
 
-Modern Mongolian song lyrics (80K lines) are converted with
+80K lines modern Mongolian song lyrics are converted with
 the Inner Mongolian University's [online translator tool](http://trans.mglip.com/EnglishC2T.aspx)
 to the Mongolian script and used as the training [dataset](lyrics.txt.gz).
-To prepare the dataset to use with `fairseq`, execute:
+To prepare binarized datasets to use with `fairseq`, execute:
 ```bash
 python create_dataset.py
 # binarized dataset for Mongolian script to cyrillic
@@ -32,32 +32,43 @@ python fairseq/preprocess.py \
   --destdir cyrillic2bichig-bin
 ```
 
+## Cyrillic to Mongolian Script
+For an online Colab demo, visit: [Cyrillic2Bichig.ipynb](https://colab.research.google.com/github/tugstugi/mongolian-nlp/blob/master/bichig2cyrillic/notebooks/Cyrillic2Bichig.ipynb)
+
+To train a [transformer](https://arxiv.org/abs/1706.03762) character model for 30 epochs, execute:
+```bash
+python fairseq/train.py  --optimizer adam --lr 5e-5 --min-lr 5e-10 --lr-shrink 0.5 \
+  --max-tokens 1000 --arch transformer --clip-norm 0.5 \
+  --max-epoch 30 \
+  --save-dir checkpoints/cyrillic2bichig cyrillic2bichig-bin
+```
+After training, the training loss should be under 0.01.
+
+Now convert some cyrillic [texts](http://dovchoo_93.blog.gogo.mn/read/entry47697) into the traditional Mongolian script:
+```bash
+echo "Хэн хүнтэй үг ярина гэдэг\nХэрэг дээрээ тулалдаан юм\nХалуун хүйтэн ямар ч зэвсгээс\nХатуу зөөлөн үг хүчтэй" | \
+  python cyrillic2bichig.py --path checkpoints/cyrillic2bichig/checkpoint_best.pt cyrillic2bichig-bin
+```
+The above model outputs:
+```
+ᠬᠡᠨ ᠬᠦᠮᠦᠨ ᠲᠡᠢ ᠦᠭᠡ ᠶᠠᠷᠢᠨ᠎ᠠ ᠭᠡᠳᠡᠭ
+ᠬᠡᠷᠡᠭ ᠳᠡᠭᠡᠷ᠎ᠡ ᠪᠡᠨ ᠲᠤᠯᠤᠯᠳᠤᠭᠠᠨ ᠶᠤᠮ
+ᠬᠠᠯᠠᠭᠤᠨ ᠬᠦᠢᠲᠡᠨ ᠶᠠᠮᠠᠷ ᠴᠤ ᠵᠡᠪᠰᠡᠭ ᠡᠴᠡ
+ᠬᠠᠲᠠᠭᠤ ᠵᠥᠭᠡᠯᠡᠨ ᠦᠭᠡ ᠬᠦᠴᠦᠲᠡᠢ
+```
 
 ## Mongolian Script to Cyrillic Script
 
-To train a [fully convolutional seq2seq](https://arxiv.org/abs/1705.03122) character model for 20 epochs, execute:
+Similar to above. Here some conversion example from the Mongolian president's [website](http://president.mn/mng/?p=2206):
 ```bash
-mkdir -p checkpoints/bichig2cyrillic
-python fairseq/train.py  --optimizer adam --lr 5e-5 --min-lr 5e-10 --lr-shrink 0.5 \
-  --max-tokens 1000 --arch fconv --clip-norm 0.1 \
-  --max-epoch 20 \
-  --save-dir checkpoints/bichig2cyrillic bichig2cyrillic-bin
-```
-After training, the training loss should be under 0.02.
-
-Now convert some Mongolian script texts to cyrillic:
-```bash
-echo "ᠬᠡᠨ ᠬᠦᠮᠦᠨ ᠲᠡᠢ ᠦᠭᠡ ᠶᠠᠷᠢᠨ᠎ᠠ ᠭᠡᠳᠡᠭ\nᠬᠡᠷᠡᠭ ᠳᠡᠭᠡᠷ᠎ᠡ ᠪᠡᠨ ᠲᠤᠯᠤᠯᠳᠤᠭᠠᠨ ᠶᠤᠮ\nᠬᠠᠯᠠᠭᠤᠨ ᠬᠦᠢᠲᠡᠨ ᠶᠠᠮᠠᠷ ᠴᠤ ᠵᠡᠪᠰᠡᠭ ᠡᠴᠡ\nᠬᠠᠲᠠᠭᠤ ᠵᠦᠭᠡᠯᠡᠨ ᠦᠭᠡ ᠬᠦᠴᠦᠲᠡᠢ" | \
-  python convert.py --path checkpoints/bichig2cyrillic/checkpoint_best.pt bichig2cyrillic-bin 
+echo "ᠮᠣᠩ᠋ᠭᠣᠯ ᠤᠯᠤᠰ ᠤᠨ ᠶᠡᠷᠦᠩᠬᠡᠢᠢᠯᠡᠭᠴᠢ ᠬ ∙ ᠪᠠᠲᠤᠲᠤᠯᠭ᠎ᠠ ᠥᠨᠥᠳᠥᠷ ᠧᠦ᠋ᠷᠣᠫᠠ ᠢᠢᠨ ᠬᠣᠯᠪᠣᠭ᠎ᠠ\nᠲᠡᠭᠦᠨ ᠦ ᠭᠡᠰᠢᠭᠦᠨ ᠣᠷᠣᠨ ᠨᠤᠭᠤᠳ ᠠᠴᠠ ᠮᠣᠩ᠋ᠭᠣᠯ ᠤᠯᠤᠰ ᠲᠤ ᠰᠠᠭᠤᠷᠢᠨ ᠪᠣᠯᠤᠨ ᠬᠠᠪᠰᠤᠷᠤᠨ \nᠰᠠᠭᠤᠭ᠎ᠠ ᠣᠨᠴᠠ ᠪᠥᠭᠡᠳ ᠪᠦᠷᠢᠨ ᠡᠷᠬᠡᠲᠦ ᠡᠯᠴᠢᠨ ᠰᠠᠢᠢᠳ ᠨᠠᠷ ᠢ ᠬᠦᠯᠢᠶᠡᠨ ᠠᠪᠴᠤ ᠠᠭᠤᠯᠵᠠᠪᠠ" | \
+  python bichig2cyrillic.py --path checkpoints/bichig2cyrillic/checkpoint_best.pt bichig2cyrillic-bin 
 ```
 The output should look:
 ```
-хэн хүн тэй үг ярина гэдэг
-хэрэг дээр бэн тулалдаан юм
-халуун хүйтэн ямар ч зэвсгээс
-хатуу зүглэн үгээ хүчтэй
+монгол улсын ерөнхийлөгч х баттулга өнөөдөр европийн холбоо
+түүний гишүүн орнуудаас монгол улсад суурин болон хавсран
+суугаа онц бүгээд бүрэн эрхэт элчин сайд нарыг хүлээн авч уулзав
 ```
-
-## Cyrillic to Mongolian Script
-
-Looks similar to above. Replace `bichig2cyrillic` with `cyrillic2bichig`.
+If you try this network on the Mongolian script texts found on internet, it will **fail**! Because the majority of the Mongolian script texts are misspelled. See for more information: [Coping with Problems of Unicoded Traditional
+Mongolian](http://www.cips-cl.org/static/anthology/CCL-2016/CCL-16-075.pdf)
